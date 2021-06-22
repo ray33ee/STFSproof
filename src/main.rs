@@ -14,7 +14,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 static mut TABLE_LOCATION: Option<u64> = None;
 
-const METADATA_SPACE_SIZE: u64 = 10;
+const METADATA_SPACE_SIZE: u64 = 1000;
 const DEFAULT_ACCESSES_PER_SHIFT: u64 = 500;
 const MAGIC_IDENTIFIER: u64 = 0x8d2765dd2bc8bf74;
 
@@ -33,6 +33,10 @@ struct STFSFileMetadata {
 
 #[derive(Serialize, Deserialize)]
 struct ShiftingTable {
+    ///If this is set to true, then reads will decrement the _accesses_left field (i.e. reads will contribute towards a shift)
+    _shift_on_read: bool,
+    ///If this is set to true, then writes will decrement the _accesses_left field (i.e. writes will contribute towards a shift)
+    _shift_on_write: bool,
     ///This value keeps track of how many table read/writes are allowed before a shift is initiated
     _accesses_left: u64,
     ///Maximum number of read/writes to the table before a shift is initiated
@@ -50,6 +54,8 @@ impl ShiftingTable {
 
     fn new() -> Self {
         let mut s = Self {
+            _shift_on_read: true,
+            _shift_on_write: true,
             _accesses_left: DEFAULT_ACCESSES_PER_SHIFT,
             _accesses_per_shift: DEFAULT_ACCESSES_PER_SHIFT,
             _table_size: 0,
@@ -260,10 +266,29 @@ fn access<S: Read + Write + Seek>(mut stream: S) -> Result<()> {
     Ok(())
 }
 
-fn main() {
-    let media_path = "test";
+///Used to shift-specific metadata
+fn edit_table<S: Read + Write + Seek>(mut stream: S, read_shift: Option<bool>, write_shift: Option<bool>, accesses_per_shift: Option<u64>) -> Result<()> {
+    let mut table = read_table(stream, get_table_location())?;
 
-    create(media_path.borrow(), 512 * 1000).unwrap();
+    if let Some(read) = read_shift {
+        table._shift_on_read = read;
+    }
+
+    if let Some(write) = write_shift {
+        table._shift_on_write = write;
+    }
+
+    if let Some(accesses) = accesses_per_shift {
+        table._accesses_per_shift = accesses;
+    }
+
+    Ok(())
+}
+
+fn main() {
+    let media_path = "storage/test";
+
+    create(media_path.borrow(), 512 * 10000).unwrap();
 
     let mut fp = OpenOptions::new()
         .read(true)

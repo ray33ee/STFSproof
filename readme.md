@@ -49,7 +49,7 @@ This however does not contain a decrease, so we cannot identify the table. To av
 T
 10 6 7 8 9
 
-Which gives our decrease. This keeps going on, these numbers continuously increasing. Since the trail numbers are stored as 128-bit numbers, we can keep incremementing without fear of overflow.
+Which gives our decrease. This keeps going on, these numbers continuously increasing. Since the trail numbers are stored as 128-bit numbers, we can keep incrementing without fear of overflow.
 
 # Table
 
@@ -57,13 +57,14 @@ The table itself keeps track of metadata you would associate with a filesystem t
 
 - `_accesses_left`: The number of reads/writes to the filesystem before a shift is initiated
 - `_accesses_per_shift`: The maximum number of reads/writes allowed before a shift is initiated (this value can be changed at any time)
+- `_shift_on_read` and `_shift_on_write`: Determines whether reads, writes, or both can contribute to a shift
 
 This allows us to strike a balance between spreading the load over multiple sectors (by keeping `_accesses_per_shift`) as low as possible, and maximsing performance (by keeping `_accesses_per_shift` as high as possible). Modifying this value at any time allows users to fine tune performance
 
 # Limitations of STFS
 
 ## Metadata space
-Since the table is shifted over the metadata space, this space must be reserved and is not available to the user. Since the table size is very small, a space of a few thousand sectors should be enough, and will not represent a large proportion of modern storage media.
+Since the table is shifted over the metadata space, this space must be reserved and is not available to the user. Since the table size is very small, a space of a few thousand sectors (20,000 sectors equates to just 10MB) should be enough, and will not represent a large proportion of modern storage media.
 
 # Performance
 Some reads and writes will take longer than expected, if they initiate a shift
